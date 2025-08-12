@@ -5,28 +5,42 @@ import axios from 'axios';
 const PokemonContext = createContext();
 
 export function PokemonProvider({ children }) {
-const [pokemonData, setPokemonData] = useState(null);
+  const [pokemonData, setPokemonData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [currentQuery, setCurrentQuery] = useState('skitty');
 
-
-
-useEffect(() => {
-async function fetchPokemonData() {
+  async function fetchPokemonData(queryNameOrId) {
+    const normalizedQuery = (queryNameOrId || currentQuery || '').toString().trim().toLowerCase();
+    if (!normalizedQuery) return;
     try {
-    const response = await axios.get('https://pokeapi.co/api/v2/pokemon/skitty');
-    setPokemonData(response.data);
+      setIsLoading(true);
+      setErrorMessage('');
+      const response = await axios.get(`https://pokeapi.co/api/v2/pokemon/${normalizedQuery}`);
+      setPokemonData(response.data);
     } catch (error) {
-    console.error('Error fetching Pokemon data:', error);
+      setErrorMessage('No se encontró el Pokémon.');
+      setPokemonData(null);
+    } finally {
+      setIsLoading(false);
     }
-}
+  }
 
-fetchPokemonData();
-}, []);
+  useEffect(() => {
+    fetchPokemonData(currentQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-return (
-<PokemonContext.Provider value={{ pokemonData }}>
-    {children}
-</PokemonContext.Provider>
-);
+  const value = {
+    pokemonData,
+    isLoading,
+    errorMessage,
+    currentQuery,
+    setCurrentQuery,
+    fetchPokemonData,
+  };
+
+  return <PokemonContext.Provider value={value}>{children}</PokemonContext.Provider>;
 }
 
 export function usePokemon() {
